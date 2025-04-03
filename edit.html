@@ -1,212 +1,83 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>GitHub 内容编辑器</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        max-width: 800px;
-        margin: 0 auto;
-        padding: 20px;
-        line-height: 1.6;
-      }
-      h1 {
-        color: #333;
-        text-align: center;
-      }
-      textarea {
-        width: 100%;
-        height: 300px;
-        padding: 10px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-size: 16px;
-        margin-bottom: 15px;
-        resize: vertical;
-      }
-      button {
-        padding: 10px 20px;
-        background-color: #2ea44f;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 16px;
-        transition: background-color 0.3s;
-      }
-      button:hover {
-        background-color: #22863a;
-      }
-      #status {
-        margin-top: 15px;
-        padding: 10px;
-        border-radius: 4px;
-      }
-      .success {
-        background-color: #d4edda;
-        color: #155724;
-      }
-      .error {
-        background-color: #f8d7da;
-        color: #721c24;
-      }
-      .loading {
-        color: #0c5460;
-        background-color: #d1ecf1;
-      }
-    </style>
-  </head>
-  <body>
-    <h1>GitHub 内容编辑器</h1>
-    <textarea id="contentEditor" placeholder="在这里编辑内容..."></textarea>
-    <button id="saveBtn">保存到 GitHub</button>
-    <div id="status"></div>
+<html>
+<body>
+  <textarea id="editor"></textarea>
+  <button id="saveBtn">保存</button>
+  <div id="status"></div>
 
-    <script>
-      // 配置信息
-      const CONFIG = {
-        REPO: "zunzunDeveloper/text", // 格式: 用户名/仓库名
-        FILE_PATH: "content.txt", // 仓库中的文件路径
-        TOKEN: "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", // 替换为你的GitHub Token
-      };
+  <script>
+    // 配置区（替换为你的信息↓↓↓）
+    const CONFIG = {
+      owner: "zunzunDeveloper",
+      repo: "text",
+      file: "content.txt",
+      token: "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" // 使用已验证的Token
+    };
 
-      // DOM元素
-      const editor = document.getElementById("contentEditor");
+    // 主逻辑
+    document.addEventListener("DOMContentLoaded", async () => {
+      const editor = document.getElementById("editor");
       const saveBtn = document.getElementById("saveBtn");
       const status = document.getElementById("status");
 
-      // 初始化
-      document.addEventListener("DOMContentLoaded", init);
-
-      async function init() {
-        // 检查DOM元素
-        if (!editor || !saveBtn || !status) {
-          console.error("错误: 缺少必要的DOM元素");
-          return;
-        }
-
-        // 加载现有内容
-        try {
-          setStatus("正在加载内容...", "loading");
-          const content = await loadContent();
-          editor.value = content;
-          setStatus("内容加载成功", "success");
-        } catch (error) {
-          console.error("加载失败:", error);
-          setStatus("首次使用或加载失败，将创建新文件", "error");
-          editor.value = "";
-        }
-
-        // 保存按钮事件
-        saveBtn.addEventListener("click", saveHandler);
-      }
-
-      // 加载内容函数
+      // 加载内容
       async function loadContent() {
         try {
-          const response = await makeGitHubRequest(
-            `repos/${CONFIG.REPO}/contents/${CONFIG.FILE_PATH}`,
-            "GET"
+          const res = await fetch(
+            `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.file}`,
+            {
+              headers: {
+                "Authorization": `Bearer ${CONFIG.token}`,
+                "Accept": "application/vnd.github.v3+json"
+              }
+            }
           );
-
-          if (!response.ok) {
-            throw new Error(`HTTP错误! 状态码: ${response.status}`);
-          }
-
-          const data = await response.json();
-          return decodeGitHubContent(data.content);
-        } catch (error) {
-          throw error;
+          const data = await res.json();
+          editor.value = decodeURIComponent(escape(atob(data.content)));
+        } catch (err) {
+          status.textContent = "首次使用，将创建新文件";
         }
       }
 
-      // 保存处理函数
-      async function saveHandler() {
-        const content = editor.value.trim();
-
-        if (!content) {
-          setStatus("错误: 内容不能为空", "error");
-          return;
-        }
-
+      // 保存内容
+      async function saveContent() {
         try {
-          setStatus("正在保存...", "loading");
-
           // 获取文件SHA（如果存在）
           let sha = null;
           try {
-            const getResponse = await makeGitHubRequest(
-              `repos/${CONFIG.REPO}/contents/${CONFIG.FILE_PATH}`,
-              "GET"
+            const res = await fetch(
+              `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.file}`,
+              { headers: { "Authorization": `Bearer ${CONFIG.token}` } }
             );
-            if (getResponse.ok) {
-              sha = (await getResponse.json()).sha;
-            }
-          } catch (e) {
-            console.log("文件可能不存在，将创建新文件");
-          }
+            sha = (await res.json()).sha;
+          } catch {}
 
           // 提交更新
-          const updateResponse = await makeGitHubRequest(
-            `repos/${CONFIG.REPO}/contents/${CONFIG.FILE_PATH}`,
-            "PUT",
+          await fetch(
+            `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.file}`,
             {
-              message: "通过网页编辑器更新内容",
-              content: encodeGitHubContent(content),
-              sha: sha,
+              method: "PUT",
+              headers: {
+                "Authorization": `Bearer ${CONFIG.token}`,
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                message: "网页更新",
+                content: btoa(unescape(encodeURIComponent(editor.value))),
+                sha
+              })
             }
           );
-
-          if (!updateResponse.ok) {
-            const errorData = await updateResponse.json();
-            throw new Error(errorData.message || "保存失败");
-          }
-
-          setStatus("✅ 保存成功！", "success");
-        } catch (error) {
-          console.error("保存失败:", error);
-          setStatus(`❌ 保存失败: ${error.message}`, "error");
+          status.textContent = "✅ 保存成功！";
+        } catch (err) {
+          status.textContent = "❌ 失败: " + err.message;
         }
       }
 
-      // GitHub API请求封装
-      async function makeGitHubRequest(endpoint, method, body = null) {
-        const url = `https://api.github.com/${endpoint}`;
-        const headers = {
-          Authorization: `Bearer ${CONFIG.TOKEN}`,
-          Accept: "application/vnd.github.v3+json",
-        };
-
-        const options = {
-          method: method,
-          headers: headers,
-        };
-
-        if (body) {
-          options.body = JSON.stringify(body);
-          headers["Content-Type"] = "application/json";
-        }
-
-        return await fetch(url, options);
-      }
-
-      // GitHub内容编码（处理中文）
-      function encodeGitHubContent(text) {
-        return btoa(unescape(encodeURIComponent(text)));
-      }
-
-      // GitHub内容解码（处理中文）
-      function decodeGitHubContent(base64) {
-        return decodeURIComponent(escape(atob(base64.replace(/\s/g, ""))));
-      }
-
-      // 状态显示函数
-      function setStatus(message, type = "") {
-        status.textContent = message;
-        status.className = type;
-      }
-    </script>
-  </body>
+      // 初始化
+      loadContent();
+      saveBtn.addEventListener("click", saveContent);
+    });
+  </script>
+</body>
 </html>
