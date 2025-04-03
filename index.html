@@ -41,32 +41,34 @@
   </div>
 
   <script>
-  const REPO = "zunzunDeveloper/text";
-  const FILE_PATH = "content.txt";
+        const REPO = "zunzunDeveloper/text";  // 格式：用户名/仓库名
+        const FILE_PATH = "content.txt";
 
-  document.addEventListener('DOMContentLoaded', async () => {
-    const contentDiv = document.getElementById('content");
+        document.addEventListener('DOMContentLoaded', async () => {
+            const contentDiv = document.getElementById('content');
 
-    try {
-      // 方法 1：使用 GitHub API（Base64 解码）
-      const apiResponse = await fetch(
-        `https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`
-      );
-      const apiData = await apiResponse.json();
-      const decodedContent = atob(apiData.content.replace(/\n/g, ''));
-      contentDiv.textContent = decodedContent;
+            try {
+                // 方法1：使用 GitHub API（需要处理 Base64）
+                const apiResponse = await fetch(
+                    `https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`
+                );
+                if (!apiResponse.ok) throw new Error('请求失败');
+                
+                const apiData = await apiResponse.json();
+                const base64Data = apiData.content.replace(/\s/g, ''); // 移除空白字符
+                const decodedContent = decodeURIComponent(escape(atob(base64Data))); // 处理中文
+                contentDiv.textContent = decodedContent;
 
-      // 方法 2（备选）：直接读取原始文件（更简单）
-      // const rawResponse = await fetch(
-      //   `https://raw.githubusercontent.com/zunzunDeveloper/text/main/content.txt`
-      // );
-      // const rawContent = await rawResponse.text();
-      // contentDiv.textContent = rawContent;
-    } catch (error) {
-      console.error("加载失败:", error);
-      contentDiv.textContent = "加载失败，请刷新重试。";
-    }
-  });
-</script>
+                // 方法2（备选）：直接读取原始文件（更简单）
+                // const rawResponse = await fetch(
+                //     `https://raw.githubusercontent.com/${REPO}/main/${FILE_PATH}`
+                // );
+                // contentDiv.textContent = await rawResponse.text();
+            } catch (error) {
+                console.error("加载失败:", error);
+                contentDiv.textContent = "加载失败，请刷新重试。";
+            }
+        });
+    </script>
 </body>
 </html>
