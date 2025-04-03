@@ -40,7 +40,6 @@
   <script>
     const REPO = "zunzunDeveloper/text"; // 例如：yourusername/yourrepo
     const FILE_PATH = "content.txt"; // 存储内容的文件
-    const TOKEN = "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"; // 替换成你的 Token
 
     document.addEventListener('DOMContentLoaded', async () => {
       const editor = document.getElementById('contentEditor');
@@ -79,7 +78,7 @@
               `https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`,
               {
                 headers: {
-                  'Authorization': `token ${TOKEN}`,
+                  'Authorization': `token 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`,
                   'Accept': 'application/vnd.github.v3+json'
                 }
               }
