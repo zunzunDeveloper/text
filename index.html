@@ -50,7 +50,7 @@
       try {
         // 从 GitHub 获取最新内容
         const response = await fetch(
-          `https://api.github.com/repos/${REPO}/${FILE_PATH}`
+          `https://raw.githubusercontent.com/zunzunDeveloper/text/refs/heads/main/content.txt`
         );
         const data = await response.json();
         const content = atob(data.content); // Base64 解码
