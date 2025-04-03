@@ -54,6 +54,7 @@
         );
         const data = await response.json();
         const content = atob(data.content); // Base64 解码
+        console.log(content)
         contentDiv.textContent = content;
       } catch (error) {
         contentDiv.textContent = "加载失败，请刷新重试。";
