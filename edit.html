@@ -49,7 +49,7 @@
       // 从 GitHub 加载现有内容
       try {
         const response = await fetch(
-          `https://raw.githubusercontent.com/zunzunDeveloper/text/refs/heads/main/content.txt`,
+          `https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`,
           {
             headers: {
               'Authorization': `token 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`,
