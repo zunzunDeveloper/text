@@ -1,175 +1,167 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>编辑内容</title>
     <style>
-      body {
-        font-family: Arial, sans-serif;
-        max-width: 800px;
-        margin: 0 auto;
-        padding: 20px;
-      }
-      textarea {
-        width: 100%;
-        height: 300px;
-        padding: 10px;
-        font-size: 16px;
-      }
-      button {
-        padding: 10px 20px;
-        background: #28a745;
-        color: white;
-        border: none;
-        cursor: pointer;
-        margin-top: 10px;
-      }
-      #status {
-        margin-top: 10px;
-        color: green;
-      }
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 300px;
+            padding: 10px;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            background: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        #status {
+            margin-top: 10px;
+            min-height: 20px;
+        }
+        .error {
+            color: red;
+        }
+        .success {
+            color: green;
+        }
     </style>
-  </head>
-  <body>
+</head>
+<body>
     <h1>编辑内容</h1>
     <textarea id="contentEditor"></textarea>
     <button id="saveBtn">保存</button>
     <div id="status"></div>
 
     <script>
-      // 配置信息
-      const REPO = "zunzunDeveloper/text";
-      const FILE_PATH = "content.txt";
-      const TOKEN = "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"; // 替换为你的有效Token
-      
-      // 确保DOM加载完成
-      document.addEventListener("DOMContentLoaded", async () => {
-          const editor = document.getElementById("contentEditor");
-          const saveBtn = document.getElementById("saveBtn");
-          const status = document.getElementById("status");
-          
-          if (!editor || !saveBtn || !status) {
-              console.error("无法找到必要的DOM元素");
-              return;
-          }
+        // 配置信息 - 确保使用英文标点
+        const REPO = "zunzunDeveloper/text";
+        const FILE_PATH = "content.txt";
+        const TOKEN = "ghp_your_valid_token_here"; // 替换为有效Token
+        
+        document.addEventListener("DOMContentLoaded", async () => {
+            const editor = document.getElementById("contentEditor");
+            const saveBtn = document.getElementById("saveBtn");
+            const status = document.getElementById("status");
 
-          // 加载现有内容
-          const loadContent = async () => {
-              try {
-                  status.textContent = "加载中...";
-                  status.className = "";
-                  
-                  const response = await fetch(
-                      `https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`,
-                      {
-                          headers: {
-                              "Authorization": `token ${TOKEN}`,
-                              "Accept": "application/vnd.github.v3+json"
-                          }
-                      }
-                  );
-                  
-                  if (!response.ok) {
-                      throw new Error(`HTTP错误! 状态码: ${response.status}`);
-                  }
-                  
-                  const data = await response.json();
-                  
-                  // 处理Base64解码和中文
-                  const decodedContent = decodeURIComponent(
-                      escape(
-                          atob(data.content.replace(/\s/g, ''))
-                      )
-                  );
-                  
-                  editor.value = decodedContent;
-                  status.textContent = "内容加载成功";
-                  status.className = "success";
-                  
-              } catch (error) {
-                  console.error("加载错误:", error);
-                  status.textContent = "首次使用或加载失败，将创建新文件";
-                  status.className = "error";
-                  editor.value = ""; // 清空编辑器
-              }
-          };
+            // 加载现有内容
+            const loadContent = async () => {
+                try {
+                    status.textContent = "加载中...";
+                    status.className = "";
+                    
+                    const response = await fetch(
+                        `https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`,
+                        {
+                            headers: new Headers({
+                                "Authorization": `token ${TOKEN}`,
+                                "Accept": "application/vnd.github.v3+json"
+                            })
+                        }
+                    );
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP错误! 状态码: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    const decodedContent = decodeURIComponent(
+                        escape(atob(data.content.replace(/\s/g, '')))
+                    );
+                    
+                    editor.value = decodedContent;
+                    status.textContent = "内容加载成功";
+                    status.className = "success";
+                    
+                } catch (error) {
+                    console.error("加载错误:", error);
+                    status.textContent = "首次使用或加载失败，将创建新文件";
+                    status.className = "error";
+                    editor.value = "";
+                }
+            };
 
-          // 保存内容到GitHub
-          const saveContent = async () => {
-              const content = editor.value.trim();
-              const message = "通过网页编辑器更新内容";
-              
-              if (!content) {
-                  status.textContent = "内容不能为空";
-                  status.className = "error";
-                  return;
-              }
-              
-              try {
-                  status.textContent = "保存中...";
-                  status.className = "";
-                  
-                  // 1. 先获取文件SHA（如果存在）
-                  let sha = null;
-                  try {
-                      const getResponse = await fetch(
-                          `https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`,
-                          {
-                              headers: {
-                                  "Authorization": `token ${TOKEN}`,
-                                  "Accept": "application/vnd.github.v3+json"
-                              }
-                          }
-                      );
-                      
-                      if (getResponse.ok) {
-                          const getData = await getResponse.json();
-                          sha = getData.sha;
-                      }
-                  } catch (e) {
-                      console.log("文件可能不存在，将创建新文件");
-                  }
-                  
-                  // 2. 提交更新
-                  const updateResponse = await fetch(
-                      `https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`,
-                      {
-                          method: "PUT",
-                          headers: {
-                              "Authorization": `token ${TOKEN}`,
-                              "Accept": "application/vnd.github.v3+json",
-                              "Content-Type": "application/json"
-                          },
-                          body: JSON.stringify({
-                              message,
-                              content: btoa(unescape(encodeURIComponent(content))),
-                              sha
-                          })
-                      }
-                  );
-                  
-                  if (!updateResponse.ok) {
-                      const errorData = await updateResponse.json();
-                      throw new Error(errorData.message || "保存失败");
-                  }
-                  
-                  status.textContent = "✅ 保存成功！";
-                  status.className = "success";
-                  
-              } catch (error) {
-                  console.error("保存错误:", error);
-                  status.textContent = `❌ 保存失败: ${error.message}`;
-                  status.className = "error";
-              }
-          };
+            // 保存内容
+            const saveContent = async () => {
+                const content = editor.value.trim();
+                const message = "Update content via web editor"; // 使用英文避免编码问题
+                
+                if (!content) {
+                    status.textContent = "内容不能为空";
+                    status.className = "error";
+                    return;
+                }
+                
+                try {
+                    status.textContent = "保存中...";
+                    status.className = "";
+                    
+                    // 获取文件SHA（如果存在）
+                    let sha = null;
+                    try {
+                        const getResponse = await fetch(
+                            `https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`,
+                            {
+                                headers: new Headers({
+                                    "Authorization": `token ${TOKEN}`,
+                                    "Accept": "application/vnd.github.v3+json"
+                                })
+                            }
+                        );
+                        if (getResponse.ok) {
+                            sha = (await getResponse.json()).sha;
+                        }
+                    } catch (e) {
+                        console.log("文件可能不存在");
+                    }
+                    
+                    // 提交更新
+                    const updateResponse = await fetch(
+                        `https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`,
+                        {
+                            method: "PUT",
+                            headers: new Headers({
+                                "Authorization": `token ${TOKEN}`,
+                                "Accept": "application/vnd.github.v3+json",
+                                "Content-Type": "application/json"
+                            }),
+                            body: JSON.stringify({
+                                message,
+                                content: btoa(unescape(encodeURIComponent(content))),
+                                sha
+                            })
+                        }
+                    );
+                    
+                    if (!updateResponse.ok) {
+                        const errorData = await updateResponse.json();
+                        throw new Error(errorData.message || "保存失败");
+                    }
+                    
+                    status.textContent = "✅ 保存成功！";
+                    status.className = "success";
+                    
+                } catch (error) {
+                    console.error("保存错误:", error);
+                    status.textContent = `❌ 保存失败: ${error.message}`;
+                    status.className = "error";
+                }
+            };
 
-          // 初始化
-          await loadContent();
-          
-          // 事件监听
-          saveBtn.addEventListener("click", saveContent);
-      });
-  </script>
-  </body>
+            // 初始化
+            await loadContent();
+            saveBtn.addEventListener("click", saveContent);
+        });
+    </script>
+</body>
 </html>
